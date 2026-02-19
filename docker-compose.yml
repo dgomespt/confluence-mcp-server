@@ -1,0 +1,50 @@
+services:
+  # STDIO mode - for Claude Desktop (communicates via stdin/stdout, no port needed)
+  confluence-mcp:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      - CONFLUENCE_URL=${CONFLUENCE_URL}
+      - CONFLUENCE_USERNAME=${CONFLUENCE_USERNAME}
+      - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN}
+      - MCP_TRANSPORT=stdio
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    stdin_open: true
+    tty: true
+    profiles:
+      - stdio
+
+  # SSE mode - for network-based MCP clients (HTTP server on port 8080)
+  confluence-mcp-sse:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      - CONFLUENCE_URL=${CONFLUENCE_URL}
+      - CONFLUENCE_USERNAME=${CONFLUENCE_USERNAME}
+      - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN}
+      - MCP_TRANSPORT=sse
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8080
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    stdin_open: false
+    tty: false
+    profiles:
+      - sse
+
+# Usage:
+#   # STDIO mode (for Claude Desktop):
+#   docker compose --profile stdio run confluence-mcp
+#
+#   # SSE mode (for network clients):
+#   docker compose --profile sse up -d

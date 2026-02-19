@@ -1,0 +1,11 @@
+# Core dependencies
+mcp
+atlassian-python-api
+beautifulsoup4
+
+# Testing dependencies
+pytest
+pytest-asyncio
+
+# Optional: for better HTML parsing
+lxml
