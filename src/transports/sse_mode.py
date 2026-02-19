@@ -5,11 +5,25 @@ that clients can connect to via HTTP SSE.
 """
 import os
 from typing import Optional
+
 from mcp.server.fastmcp import FastMCP
 
 from src.core.config import Config, get_confluence_client
 from src.core.confluence_mock import ConfluenceMock, create_mock_confluence
 from src.core.html_utils import html_to_markdown
+from src.core.logging_config import get_logger, setup_logging
+from src.core.validators import (
+    validate_limit,
+    validate_page_id,
+    validate_query,
+    validate_space_key,
+)
+from src.core.error_handling import handle_api_errors, log_api_call
+from src.core.exceptions import ConfluenceNotFoundError
+
+
+# Initialize logger
+logger = get_logger("sse_mode")
 
 
 def search_confluence_impl(confluence, query: str, limit: int = 5) -> str:
@@ -23,17 +37,27 @@ def search_confluence_impl(confluence, query: str, limit: int = 5) -> str:
     Returns:
         Formatted search results with titles, IDs, and links.
     """
+    # Validate inputs
+    query = validate_query(query)
+    limit = validate_limit(limit)
+    
+    logger.info(f"Searching Confluence for: '{query}' (limit: {limit})")
+    
     results = confluence.cql(f'text ~ "{query}"', limit=limit)
     
     output = []
     for item in results.get('results', []):
         title = item['content']['title']
         page_id = item['content']['id']
+        # Get confluence URL from client or use environment
         base_url = getattr(confluence, 'url', None) or os.getenv('CONFLUENCE_URL', '')
         url = f"{base_url}/wiki{item['content']['_links']['webui']}"
         output.append(f"- {title} (ID: {page_id})\n  Link: {url}")
-        
-    return "\n".join(output) if output else "No results found."
+    
+    result_str = "\n".join(output) if output else "No results found."
+    logger.info(f"Search completed. Found {len(output)} results for query: '{query}'")
+    
+    return result_str
 
 
 def get_page_content_impl(confluence, page_id: str, convert_to_markdown: bool = True) -> str:
@@ -48,7 +72,17 @@ def get_page_content_impl(confluence, page_id: str, convert_to_markdown: bool = 
     Returns:
         Page title and content in Markdown or HTML format.
     """
-    page = confluence.get_page_by_id(page_id, expand='body.storage')
+    # Validate inputs
+    page_id = validate_page_id(page_id)
+    
+    logger.info(f"Getting page content for ID: {page_id}")
+    
+    try:
+        page = confluence.get_page_by_id(page_id, expand='body.storage')
+    except Exception as e:
+        logger.warning(f"Page not found: {page_id}")
+        raise ConfluenceNotFoundError("Page", page_id)
+    
     title = page.get('title')
     html_body = page.get('body', {}).get('storage', {}).get('value', '')
     
@@ -57,7 +91,10 @@ def get_page_content_impl(confluence, page_id: str, convert_to_markdown: bool = 
     else:
         content = html_body
     
-    return f"Title: {title}\n\n{content}"
+    result = f"Title: {title}\n\n{content}"
+    logger.info(f"Retrieved content for page: {title} (ID: {page_id})")
+    
+    return result
 
 
 def list_pages_impl(confluence, space: str = "ENG", limit: int = 10) -> str:
@@ -71,6 +108,12 @@ def list_pages_impl(confluence, space: str = "ENG", limit: int = 10) -> str:
     Returns:
         Formatted list of pages with titles, IDs, and links.
     """
+    # Validate inputs
+    space = validate_space_key(space)
+    limit = validate_limit(limit)
+    
+    logger.info(f"Listing pages in space: {space} (limit: {limit})")
+    
     results = confluence.cql(f"space={space} AND type=page", limit=limit)
     
     output = []
@@ -80,8 +123,11 @@ def list_pages_impl(confluence, space: str = "ENG", limit: int = 10) -> str:
         base_url = getattr(confluence, 'url', None) or os.getenv('CONFLUENCE_URL', '')
         url = f"{base_url}/wiki{item['content']['_links']['webui']}"
         output.append(f"- {title} (ID: {page_id})\n  Link: {url}")
-        
-    return "\n".join(output) if output else f"No pages found in space {space}."
+    
+    result_str = "\n".join(output) if output else f"No pages found in space {space}."
+    logger.info(f"Listed {len(output)} pages in space: {space}")
+    
+    return result_str
 
 
 def create_mcp_app_sse(
@@ -118,10 +164,23 @@ def create_mcp_app_sse(
     mcp.confluence = confluence
     
     @mcp.tool()
+    @handle_api_errors
+    @log_api_call
     def search_confluence(query: str, limit: int = 5) -> str:
+        """Search Confluence pages and blogs.
+        
+        Args:
+            query: The search query string.
+            limit: Maximum number of results (default: 5, max: 100).
+        
+        Returns:
+            Formatted search results with titles, IDs, and links.
+        """
         return search_confluence_impl(confluence, query, limit)
 
     @mcp.tool()
+    @handle_api_errors
+    @log_api_call
     def get_page_content(page_id: str, convert_to_markdown: bool = True) -> str:
         """Retrieve the content of a Confluence page.
         
@@ -136,7 +195,18 @@ def create_mcp_app_sse(
         return get_page_content_impl(confluence, page_id, convert_to_markdown)
     
     @mcp.tool()
+    @handle_api_errors
+    @log_api_call
     def list_pages(space: str = "ENG", limit: int = 10) -> str:
+        """List all pages in a Confluence space.
+        
+        Args:
+            space: The Confluence space key (default: ENG).
+            limit: Maximum number of results (default: 10, max: 100).
+        
+        Returns:
+            Formatted list of pages with titles, IDs, and links.
+        """
         return list_pages_impl(confluence, space, limit)
 
     return mcp
@@ -149,6 +219,12 @@ def run_sse(host: str = "0.0.0.0", port: int = 8080):
         host: Host to bind to (default: 0.0.0.0).
         port: Port to bind to (default: 8080).
     """
+    # Setup logging
+    structured = os.getenv("LOG_STRUCTURED", "false").lower() == "true"
+    setup_logging(structured=structured)
+    
+    logger.info(f"Starting Confluence MCP Server in SSE mode on {host}:{port}")
+    
     mcp = create_mcp_app_sse()
     # FastMCP's run method with transport='sse' starts an SSE server
     mcp.run(transport="sse", host=host, port=port)

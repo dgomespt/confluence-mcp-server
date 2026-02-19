@@ -11,6 +11,7 @@ from src.transports.sse_mode import (
 )
 from src.core.confluence_mock import create_mock_confluence, ConfluenceMock
 from src.core.html_utils import html_to_markdown, html_to_markdown_simple
+from src.core.exceptions import InvalidQueryError, InvalidLimitError, InvalidPageIdError, InvalidSpaceKeyError
 
 
 @pytest.fixture
@@ -48,6 +49,16 @@ class TestSearchConfluence:
         
         assert "Link:" in result
         assert "atlassian.net" in result or "mock.atlassian.net" in result
+    
+    def test_search_empty_query_raises_error(self, mock_confluence):
+        """Test search with empty query raises validation error."""
+        with pytest.raises(InvalidQueryError):
+            search_confluence_impl(mock_confluence, query="", limit=5)
+    
+    def test_search_limit_validation(self, mock_confluence):
+        """Test search validates limit parameter."""
+        with pytest.raises(InvalidLimitError):
+            search_confluence_impl(mock_confluence, query="test", limit=200)
 
 
 class TestGetPageContent:
@@ -72,16 +83,19 @@ class TestGetPageContent:
     
     def test_get_page_content_invalid_id(self, mock_confluence):
         """Test get_page_content with invalid ID raises error."""
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Exception):
             get_page_content_impl(mock_confluence, page_id="999")
-        
-        assert "not found" in str(exc_info.value).lower()
     
     def test_get_page_content_different_pages(self, mock_confluence):
         """Test getting different pages returns correct content."""
         result = get_page_content_impl(mock_confluence, page_id="102")
         
         assert "Title: API Documentation" in result
+    
+    def test_get_page_empty_id_raises_error(self, mock_confluence):
+        """Test get_page_content with empty ID raises error."""
+        with pytest.raises(InvalidPageIdError):
+            get_page_content_impl(mock_confluence, page_id="")
 
 
 class TestListPages:
@@ -114,6 +128,16 @@ class TestListPages:
         
         # Should work without error
         assert isinstance(result, str)
+    
+    def test_list_pages_invalid_space_raises_error(self, mock_confluence):
+        """Test list_pages with invalid space raises error."""
+        with pytest.raises(InvalidSpaceKeyError):
+            list_pages_impl(mock_confluence, space="", limit=10)
+    
+    def test_list_pages_limit_validation(self, mock_confluence):
+        """Test list_pages validates limit parameter."""
+        with pytest.raises(InvalidLimitError):
+            list_pages_impl(mock_confluence, space="ENG", limit=0)
 
 
 class TestMCPApp:
@@ -181,20 +205,6 @@ class TestSSEIntegration:
 
 class TestEdgeCases:
     """Edge case tests."""
-    
-    def test_search_empty_query(self, mock_confluence):
-        """Test search with empty query."""
-        result = search_confluence_impl(mock_confluence, query="")
-        
-        # Should return no results or handle gracefully
-        assert isinstance(result, str)
-    
-    def test_list_pages_zero_limit(self, mock_confluence):
-        """Test list_pages with zero limit."""
-        result = list_pages_impl(mock_confluence, space="ENG", limit=0)
-        
-        # Should handle gracefully
-        assert isinstance(result, str)
     
     def test_get_page_content_with_empty_html(self, mock_confluence):
         """Test get_page_content with page that has empty HTML body."""

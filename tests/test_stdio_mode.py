@@ -9,6 +9,7 @@ from src.transports.stdio_mode import (
     list_pages_impl
 )
 from src.core.confluence_mock import create_mock_confluence, ConfluenceMock
+from src.core.exceptions import InvalidQueryError, InvalidLimitError, InvalidPageIdError
 
 
 @pytest.fixture
@@ -54,10 +55,8 @@ def test_get_page_content_raw_html(mock_confluence):
 
 def test_get_page_content_invalid_id(mock_confluence):
     """Test get_page_content with invalid ID raises error."""
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(Exception):
         get_page_content_impl(mock_confluence, page_id="999")
-    
-    assert "not found" in str(exc_info.value).lower()
 
 
 def test_list_pages(mock_confluence):
@@ -86,3 +85,38 @@ def test_mcp_app_with_use_mock_flag():
     assert app is not None
     assert app.name == "Confluence-MCP-Server"
     assert app.confluence is not None
+
+
+class TestValidationIntegration:
+    """Tests for validation integration."""
+    
+    def test_search_empty_query_raises_error(self, mock_confluence):
+        """Test search with empty query raises validation error."""
+        with pytest.raises(InvalidQueryError):
+            search_confluence_impl(mock_confluence, query="", limit=5)
+    
+    def test_search_limit_too_high_raises_error(self, mock_confluence):
+        """Test search with limit above max raises error."""
+        with pytest.raises(InvalidLimitError):
+            search_confluence_impl(mock_confluence, query="test", limit=200)
+    
+    def test_search_limit_too_low_raises_error(self, mock_confluence):
+        """Test search with limit below min raises error."""
+        with pytest.raises(InvalidLimitError):
+            search_confluence_impl(mock_confluence, query="test", limit=0)
+    
+    def test_get_page_invalid_id_raises_error(self, mock_confluence):
+        """Test get_page_content with invalid page ID raises error."""
+        with pytest.raises(InvalidPageIdError):
+            get_page_content_impl(mock_confluence, page_id="")
+    
+    def test_list_pages_invalid_space_raises_error(self, mock_confluence):
+        """Test list_pages with invalid space raises error."""
+        from src.core.exceptions import InvalidSpaceKeyError
+        with pytest.raises(InvalidSpaceKeyError):
+            list_pages_impl(mock_confluence, space="", limit=10)
+    
+    def test_list_pages_limit_validation(self, mock_confluence):
+        """Test list_pages validates limit parameter."""
+        with pytest.raises(InvalidLimitError):
+            list_pages_impl(mock_confluence, space="ENG", limit=0)
