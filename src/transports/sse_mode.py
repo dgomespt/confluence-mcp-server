@@ -20,6 +20,7 @@ from src.core.validators import (
 )
 from src.core.error_handling import handle_api_errors, log_api_call
 from src.core.exceptions import ConfluenceNotFoundError
+from src.core.health import get_health_status_dict
 
 
 # Initialize logger
@@ -208,6 +209,19 @@ def create_mcp_app_sse(
             Formatted list of pages with titles, IDs, and links.
         """
         return list_pages_impl(confluence, space, limit)
+
+    @mcp.tool()
+    @handle_api_errors
+    @log_api_call
+    def health_check() -> str:
+        """Check the health status of the MCP server and Confluence connection.
+        
+        Returns:
+            JSON string with health status information.
+        """
+        import json
+        health_status = get_health_status_dict(confluence)
+        return json.dumps(health_status, indent=2)
 
     return mcp
 
