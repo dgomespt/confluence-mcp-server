@@ -2,6 +2,11 @@
 mcp
 atlassian-python-api
 beautifulsoup4
+prometheus-client
+
+# HTTP server for SSE mode
+uvicorn
+fastapi
 
 # Testing dependencies
 pytest

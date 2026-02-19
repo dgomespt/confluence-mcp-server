@@ -4,14 +4,20 @@ This transport mode allows the MCP server to run as a remote server
 that clients can connect to via HTTP SSE.
 """
 import os
+import time
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
+import uvicorn
 
 from src.core.config import Config, get_confluence_client
 from src.core.confluence_mock import ConfluenceMock, create_mock_confluence
 from src.core.html_utils import html_to_markdown
 from src.core.logging_config import get_logger, setup_logging
+from src.core.metrics import (
+    get_metrics,
+    get_metrics_content_type,
+)
 from src.core.validators import (
     validate_limit,
     validate_page_id,
@@ -177,7 +183,18 @@ def create_mcp_app_sse(
         Returns:
             Formatted search results with titles, IDs, and links.
         """
-        return search_confluence_impl(confluence, query, limit)
+        from src.core.metrics import record_tool_invocation, record_tool_duration, record_tool_error
+        start_time = time.time()
+        try:
+            result = search_confluence_impl(confluence, query, limit)
+            record_tool_invocation("search_confluence", "success")
+            return result
+        except Exception as e:
+            record_tool_invocation("search_confluence", "error")
+            record_tool_error("search_confluence", type(e).__name__)
+            raise
+        finally:
+            record_tool_duration("search_confluence", time.time() - start_time)
 
     @mcp.tool()
     @handle_api_errors
@@ -193,7 +210,18 @@ def create_mcp_app_sse(
         Returns:
             Page content in Markdown (default) or HTML format.
         """
-        return get_page_content_impl(confluence, page_id, convert_to_markdown)
+        from src.core.metrics import record_tool_invocation, record_tool_duration, record_tool_error
+        start_time = time.time()
+        try:
+            result = get_page_content_impl(confluence, page_id, convert_to_markdown)
+            record_tool_invocation("get_page_content", "success")
+            return result
+        except Exception as e:
+            record_tool_invocation("get_page_content", "error")
+            record_tool_error("get_page_content", type(e).__name__)
+            raise
+        finally:
+            record_tool_duration("get_page_content", time.time() - start_time)
     
     @mcp.tool()
     @handle_api_errors
@@ -208,7 +236,18 @@ def create_mcp_app_sse(
         Returns:
             Formatted list of pages with titles, IDs, and links.
         """
-        return list_pages_impl(confluence, space, limit)
+        from src.core.metrics import record_tool_invocation, record_tool_duration, record_tool_error
+        start_time = time.time()
+        try:
+            result = list_pages_impl(confluence, space, limit)
+            record_tool_invocation("list_pages", "success")
+            return result
+        except Exception as e:
+            record_tool_invocation("list_pages", "error")
+            record_tool_error("list_pages", type(e).__name__)
+            raise
+        finally:
+            record_tool_duration("list_pages", time.time() - start_time)
 
     @mcp.tool()
     @handle_api_errors
@@ -220,28 +259,66 @@ def create_mcp_app_sse(
             JSON string with health status information.
         """
         import json
-        health_status = get_health_status_dict(confluence)
-        return json.dumps(health_status, indent=2)
+        from src.core.metrics import record_tool_invocation, record_tool_duration
+        start_time = time.time()
+        try:
+            health_status = get_health_status_dict(confluence)
+            record_tool_invocation("health_check", "success")
+            return json.dumps(health_status, indent=2)
+        finally:
+            record_tool_duration("health_check", time.time() - start_time)
 
     return mcp
 
 
 def run_sse(host: str = "0.0.0.0", port: int = 8080):
-    """Run the MCP server in SSE mode.
+    """Run the MCP server in SSE mode with metrics endpoint.
     
     Args:
         host: Host to bind to (default: 0.0.0.0).
         port: Port to bind to (default: 8080).
     """
+    import anyio
+    from starlette.applications import Starlette
+    from starlette.routing import Route, Mount
+    from starlette.requests import Request as StarletteRequest
+    from starlette.responses import JSONResponse, Response as StarletteResponse
+    
     # Setup logging
     structured = os.getenv("LOG_STRUCTURED", "false").lower() == "true"
     setup_logging(structured=structured)
     
     logger.info(f"Starting Confluence MCP Server in SSE mode on {host}:{port}")
     
+    # Create the MCP app
     mcp = create_mcp_app_sse()
-    # FastMCP's run method with transport='sse' starts an SSE server
-    mcp.run(transport="sse", host=host, port=port)
+    
+    # Get the underlying SSE Starlette app from FastMCP
+    mcp_sse_app = mcp.sse_app()
+    
+    # Define metrics and health endpoints
+    async def metrics_endpoint(request: StarletteRequest) -> StarletteResponse:
+        """Prometheus metrics endpoint."""
+        return StarletteResponse(
+            content=get_metrics(),
+            media_type=get_metrics_content_type()
+        )
+    
+    async def health_endpoint(request: StarletteRequest) -> JSONResponse:
+        """Health check endpoint."""
+        return JSONResponse({"status": "healthy"})
+    
+    # Create combined Starlette app with metrics and MCP routes
+    app = Starlette(
+        routes=[
+            Route("/metrics", endpoint=metrics_endpoint, methods=["GET"]),
+            Route("/health", endpoint=health_endpoint, methods=["GET"]),
+            Mount("/", app=mcp_sse_app),
+        ]
+    )
+    
+    # Run with uvicorn
+    uvicorn.run(app, host=host, port=port)
 
 
 if __name__ == "__main__":
