@@ -37,12 +37,10 @@ jobs:
           pytest tests/ -v --cov=src --cov-report=xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-        if: matrix.python-version == '3.11'
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: dgomespt/confluence-mcp-server
 
   lint:
     name: Lint Code
