@@ -12,7 +12,7 @@ class Config:
     confluence_username: str
     confluence_api_token: str
     transport: str = "stdio"
-    host: str = "0.0.0.0"
+    host: str = "127.0.0.1"
     port: int = 8080
     
     @classmethod
@@ -23,7 +23,7 @@ class Config:
             confluence_username=cls._require_env("CONFLUENCE_USERNAME"),
             confluence_api_token=cls._require_env("CONFLUENCE_API_TOKEN"),
             transport=os.getenv("MCP_TRANSPORT", "stdio"),
-            host=os.getenv("MCP_HOST", "0.0.0.0"),
+            host=os.getenv("MCP_HOST", "127.0.0.1"),
             port=int(os.getenv("MCP_PORT", "8080")),
         )
     

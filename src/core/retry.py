@@ -105,8 +105,8 @@ def calculate_delay(
     delay = initial_delay * (backoff_factor ** attempt)
     
     # Add small random jitter (0-1 second)
-    import random
-    jitter = random.random()
+    import secrets
+    jitter = secrets.SystemRandom().random()
     
     return min(delay + jitter, max_delay)
 

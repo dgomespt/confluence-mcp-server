@@ -31,7 +31,7 @@ def main():
         from src.transports.sse_mode import run_sse
         
         config = Config.from_env_optional()
-        host = config.host if config else "0.0.0.0"
+        host = config.host if config else "127.0.0.1"
         port = config.port if config else 8080
         
         logger.info(f"Starting SSE server on {host}:{port}")

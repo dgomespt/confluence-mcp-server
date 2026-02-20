@@ -271,7 +271,7 @@ def create_mcp_app_sse(
     return mcp
 
 
-def run_sse(host: str = "0.0.0.0", port: int = 8080):
+def run_sse(host: str = "127.0.0.1", port: int = 8080):
     """Run the MCP server in SSE mode with metrics endpoint.
     
     Args:
@@ -325,7 +325,7 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description="Confluence MCP Server - SSE Mode")
-    parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
+    parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8080, help="Port to bind to")
     
     args = parser.parse_args()
