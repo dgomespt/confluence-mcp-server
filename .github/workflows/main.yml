@@ -94,7 +94,7 @@ jobs:
         run: bandit -r src/ -f json -o bandit-report.json
 
       - name: Run Safety dependency check
-        run: safety check -r requirements.txt --json --full-report > safety-report.json
+        run: safety check -r requirements.txt --json > safety-report.json
 
       - name: Upload security reports
         uses: actions/upload-artifact@v4
