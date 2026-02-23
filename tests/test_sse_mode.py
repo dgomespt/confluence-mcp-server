@@ -2,12 +2,12 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from src.transports.sse_mode import (
-    create_mcp_app_sse,
+from src.transports.sse_mode import run_sse
+from src.modules.confluence import (
+    create_mcp_app,
     search_confluence_impl,
     get_page_content_impl,
-    list_pages_impl,
-    run_sse
+    list_pages_impl
 )
 from src.core.confluence_mock import create_mock_confluence, ConfluenceMock
 from src.core.html_utils import html_to_markdown, html_to_markdown_simple
@@ -146,7 +146,7 @@ class TestMCPApp:
     def test_mcp_app_sse_creation(self):
         """Test that MCP SSE app can be created with mock client."""
         mock = create_mock_confluence()
-        app = create_mcp_app_sse(confluence_client=mock, use_mock=True)
+        app = create_mcp_app(confluence_client=mock, use_mock=True)
         
         assert app is not None
         assert app.name == "Confluence-MCP-Server"
@@ -154,7 +154,7 @@ class TestMCPApp:
     
     def test_mcp_app_with_use_mock_flag(self):
         """Test that MCP SSE app can be created with use_mock=True."""
-        app = create_mcp_app_sse(use_mock=True)
+        app = create_mcp_app(use_mock=True)
         
         assert app is not None
         assert app.name == "Confluence-MCP-Server"
@@ -162,7 +162,7 @@ class TestMCPApp:
     
     def test_mcp_app_has_tools(self):
         """Test that MCP app has the expected tools registered."""
-        app = create_mcp_app_sse(use_mock=True)
+        app = create_mcp_app(use_mock=True)
         
         # The app should have tools registered
         # FastMCP tools are stored internally
@@ -198,7 +198,7 @@ class TestSSEIntegration:
     def test_sse_app_stores_confluence_client(self):
         """Test that the SSE app stores the confluence client."""
         mock = create_mock_confluence()
-        app = create_mcp_app_sse(confluence_client=mock, use_mock=True)
+        app = create_mcp_app(confluence_client=mock, use_mock=True)
         
         assert app.confluence is mock
 

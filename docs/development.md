@@ -80,14 +80,26 @@ confluence-mcp-server-example/
 │       └── main.yml         # CI/CD pipeline with GitHub Actions
 ├── src/
 │   ├── main.py              # Main entry point
-│   ├── core/
+│   ├── core/                # Core functionality shared across modules
 │   │   ├── config.py        # Configuration management
-│   │   └── confluence_mock.py  # Mock for testing
-│   └── transports/
+│   │   ├── confluence_mock.py  # Mock for testing
+│   │   ├── error_handling.py   # Error handling decorators
+│   │   ├── exceptions.py    # Custom exception classes
+│   │   ├── health.py        # Health check functionality
+│   │   ├── html_utils.py    # HTML to Markdown conversion
+│   │   ├── logging_config.py   # Logging configuration
+│   │   ├── metrics.py       # Prometheus metrics
+│   │   ├── retry.py         # Retry logic with exponential backoff
+│   │   └── validators.py    # Input validation
+│   ├── modules/             # Modules providing specific functionality
+│   │   └── confluence/
+│   │       ├── __init__.py  # Module exports
+│   │       ├── operations.py    # Core Confluence API operations
+│   │       └── mcp_integration.py  # MCP tool registration and app factory
+│   └── transports/          # Transport modes for MCP communication
 │       ├── stdio_mode.py    # STDIO transport
 │       └── sse_mode.py      # SSE transport
-├── tests/
-│   └── test_stdio_mode.py  # Tests
+├── tests/                   # Comprehensive test suite
 ├── docker/
 │   └── Dockerfile           # Docker image definition
 ├── docker-compose.yml       # Docker Compose configuration

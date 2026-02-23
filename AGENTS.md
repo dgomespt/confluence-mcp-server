@@ -1,4 +1,5 @@
 # Confluence MCP Server
+The intent of this application is to provide the basis for an MCP Server that exposes a set of tools under src/modules.
 
 ## Running commands
 - To run python commands, use the .venv environment.
