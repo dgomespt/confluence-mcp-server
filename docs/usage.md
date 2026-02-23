@@ -24,6 +24,40 @@ python -m src.main
 
 The server will start on `http://0.0.0.0:8080`.
 
+### Security Configuration for SSE Mode
+
+For production deployments, it's recommended to enable security features:
+
+#### API Key Authentication
+```bash
+export MCP_API_KEY=your_secure_api_key_here
+export MCP_TRANSPORT=sse
+python -m src.main
+```
+
+Clients must include the API key in requests:
+```http
+GET / HTTP/1.1
+X-API-Key: your_secure_api_key_here
+```
+
+#### TLS Encryption (HTTPS)
+```bash
+export MCP_API_KEY=your_secure_api_key_here
+export SSL_KEYFILE=/path/to/private.key
+export SSL_CERTFILE=/path/to/certificate.crt
+export MCP_TRANSPORT=sse
+python -m src.main
+```
+
+The server will now use HTTPS on `https://0.0.0.0:8080`.
+
+#### Rate Limiting
+Default: 100 requests per minute per IP. Can be customized:
+```bash
+export RATE_LIMIT=50/minute
+```
+
 ## Using with Claude Code
 
 1. Configure your MCP settings to point to this server:

@@ -14,6 +14,8 @@ class Config:
     transport: str = "stdio"
     host: str = "127.0.0.1"
     port: int = 8080
+    mcp_api_key: Optional[str] = None
+    rate_limit: str = "100/minute"
     
     @classmethod
     def from_env(cls) -> "Config":
@@ -25,6 +27,8 @@ class Config:
             transport=os.getenv("MCP_TRANSPORT", "stdio"),
             host=os.getenv("MCP_HOST", "127.0.0.1"),
             port=int(os.getenv("MCP_PORT", "8080")),
+            mcp_api_key=os.getenv("MCP_API_KEY"),
+            rate_limit=os.getenv("RATE_LIMIT", "100/minute"),
         )
     
     @staticmethod

@@ -12,6 +12,22 @@ The server follows a modular architecture with clear separation of concerns:
 
 ## 🛡️ Security Measures
 
+### Authentication
+
+#### API Key Authentication
+API key authentication is required for production deployments in SSE mode. Clients must include a valid API key in the `X-API-Key` header.
+
+```bash
+# Environment variable configuration
+export MCP_API_KEY=your_secure_api_key_here
+```
+
+#### Usage
+```http
+GET / HTTP/1.1
+X-API-Key: your_secure_api_key_here
+```
+
 ### Input Validation
 
 All inputs are validated before processing:
@@ -35,6 +51,25 @@ Comprehensive error handling with custom exceptions:
 - `ConfluenceRateLimitError`: For API rate limiting
 - `ConfluenceMaxRetriesError`: When maximum retries are exhausted
 
+### TLS Encryption
+
+For secure communication over HTTPS:
+
+```bash
+# Environment variable configuration
+export SSL_KEYFILE=/path/to/private.key
+export SSL_CERTFILE=/path/to/certificate.crt
+```
+
+### Rate Limiting
+
+Default rate limit: 100 requests per minute per IP. Can be customized:
+
+```bash
+# Environment variable configuration
+export RATE_LIMIT=50/minute
+```
+
 ### Configuration
 
 All sensitive information is read from environment variables:
@@ -49,7 +84,22 @@ CONFLUENCE_API_TOKEN=your-api-token
 MCP_TRANSPORT=stdio  # or sse
 MCP_HOST=127.0.0.1
 MCP_PORT=8080
+
+# Security configuration
+MCP_API_KEY=your_secure_api_key_here
+SSL_KEYFILE=/path/to/private.key
+SSL_CERTFILE=/path/to/certificate.crt
+RATE_LIMIT=100/minute
 ```
+
+### Security Headers
+
+The server automatically adds security headers to all responses:
+
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
 
 ### Security Scanning
 
