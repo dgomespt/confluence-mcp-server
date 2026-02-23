@@ -44,6 +44,10 @@ Set the following environment variables:
 | `MCP_TRANSPORT` | Transport mode: `stdio` (default) or `sse` |
 | `MCP_HOST` | Host for SSE mode (default: `0.0.0.0`) |
 | `MCP_PORT` | Port for SSE mode (default: `8080`) |
+| `MCP_API_KEY` | API key for authentication (required for production SSE mode) |
+| `SSL_KEYFILE` | Path to SSL private key file for HTTPS (TLS encryption) |
+| `SSL_CERTFILE` | Path to SSL certificate file for HTTPS (TLS encryption) |
+| `RATE_LIMIT` | Rate limit per IP address (default: `100/minute`) |
 
 To generate an API token:
 1. Go to [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
