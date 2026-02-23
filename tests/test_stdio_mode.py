@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from src.transports.stdio_mode import (
+from src.modules.confluence import (
     create_mcp_app,
     search_confluence_impl,
     get_page_content_impl,

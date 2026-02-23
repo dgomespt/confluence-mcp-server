@@ -115,7 +115,7 @@ class TestHealthCheckIntegration:
     
     def test_health_check_returns_json(self, mock_confluence):
         """Test health check tool returns JSON string."""
-        from src.transports.stdio_mode import get_health_status_dict
+        from src.core.health import get_health_status_dict
         
         result = get_health_status_dict(mock_confluence)
         

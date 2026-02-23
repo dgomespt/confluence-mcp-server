@@ -96,6 +96,24 @@ For more detailed information, see the documentation files in the `docs/` direct
 - [Development](docs/development.md) - Testing with MCP Inspector, running tests, and project structure
 - [Observability](docs/observability.md) - Metrics, health checks, and logging configuration
 - [CI/CD Pipeline](docs/cicd.md) - GitHub Actions workflow, testing, and deployment
+- [Production Readiness](docs/production.md) - Security measures, performance optimization, and deployment guidelines
+
+## Architecture
+
+The server follows a modular architecture with clear separation of concerns:
+
+- **Core Layer**: Contains shared functionality like error handling, logging, validation, and retry logic
+- **Modules Layer**: Encapsulates specific functionality (Confluence integration) with operations and MCP integration
+- **Transports Layer**: Handles communication between the server and clients using STDIO or SSE
+
+## Project Structure
+
+The main codebase is organized as:
+- `src/modules/confluence/`: Confluence integration module
+  - `operations.py`: Core API operations (search, get page content, list pages)
+  - `mcp_integration.py`: MCP tool registration and app factory
+- `src/core/`: Shared functionality
+- `src/transports/`: STDIO and SSE communication modes
 
 ## Acknowledgments
 
